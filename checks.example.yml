@@ -1,0 +1,64 @@
+# heartbeat.py - checks configuration
+#
+# Copy this file to the path heartbeat.py expects (default: /etc/heartbeat/checks.yml,
+# override with HEARTBEAT_CHECKS) and replace the examples below with your own
+# endpoints, drives, MX records, and backup repo. This file has no secrets in it;
+# credentials (SMTP, Borg passphrase) are configured separately, see
+# heartbeat.conf.example and README.md.
+#
+# This file is gitignored by default. Keep your real domains/IPs/hostnames out
+# of version control - that's the whole point of splitting it out of the script.
+
+hostname_label: null   # null = use the machine's hostname; or set a label, e.g. "prod-01"
+request_timeout: 10    # default HTTP timeout in seconds, overridable per check
+
+# ── HTTP endpoints ───────────────────────────────────────────────
+# Any 200 response is healthy. Anything else (timeout, connection error,
+# non-200 status) is a failure. verify_ssl defaults to true - only turn it
+# off for internal endpoints with self-signed certificates you already trust.
+http_checks:
+  - name: "Example Web App"
+    url: "https://app.example.com"
+    timeout: 10
+
+  - name: "Internal Dashboard (self-signed cert)"
+    url: "https://203.0.113.10:8443"
+    timeout: 10
+    verify_ssl: false
+
+# ── LUKS-encrypted drives ────────────────────────────────────────
+# Checks that mount_point is mounted (via /proc/mounts) and, if luks_device
+# is set, that /dev/mapper/<luks_device> exists (i.e. the volume is unlocked).
+drive_checks:
+  - name: "Encrypted Data Volume"
+    mount_point: "/mnt/data"
+    luks_device: "data-crypt"
+
+# ── MX DNS records ───────────────────────────────────────────────
+# The check that catches the failure mode nothing else does: if your MX
+# record silently drifts or disappears, mail-based alerting (including this
+# script's own emails) can die without anything else noticing. Resolves the
+# domain's MX records and flags any mismatch against what you expect.
+mx_checks:
+  - domain: "example.com"
+    expected_mx:
+      - "mx1.mail-provider.example"
+      - "mx2.mail-provider.example"
+
+# ── Borg backup freshness ────────────────────────────────────────
+# Fetches only the most recent archive (`borg list --last 1`) and flags it
+# stale if older than stale_after_hours. Deliberately does NOT run `borg
+# check` (repo integrity) - on a multi-TB repo over SSH that can take hours.
+# Schedule integrity checks separately, e.g. a weekly cron job.
+borg_check:
+  enabled: false
+  name: "Offsite Borg Backup"
+  repo: "ssh://user@backup-host.example:23/./backups/repo-name"
+  # Passphrase is read from HEARTBEAT_BORG_PASSPHRASE, then the [borg] section
+  # of heartbeat.conf, then this file as a last resort:
+  passphrase_file: "/etc/heartbeat/borg_passphrase"
+  ssh_key: "/home/user/.ssh/id_ed25519"
+  ssh_agent_sock: null
+  stale_after_hours: 24
+  borg_timeout_list: 60
+  borg_binary: "borg"

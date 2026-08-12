@@ -1,0 +1,4 @@
+# Alternative to the systemd timer: twice-daily cron entry.
+# `crontab -e` (or /etc/cron.d/heartbeat as root) and adapt the paths.
+
+0 8,20 * * * . /etc/heartbeat/heartbeat.env && /opt/heartbeat/.venv/bin/python3 /opt/heartbeat/heartbeat.py >> /var/log/heartbeat-cron.log 2>&1

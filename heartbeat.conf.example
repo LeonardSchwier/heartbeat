@@ -1,0 +1,23 @@
+# heartbeat.py - credentials fallback file
+#
+# Preferred: set these as environment variables instead (HEARTBEAT_SMTP_HOST,
+# HEARTBEAT_SMTP_PORT, HEARTBEAT_SMTP_USER, HEARTBEAT_SMTP_PASSWORD,
+# HEARTBEAT_SMTP_FROM, HEARTBEAT_SMTP_TO, HEARTBEAT_BORG_PASSPHRASE) - see
+# examples/heartbeat.env.example for a systemd EnvironmentFile you can use.
+#
+# This INI file is only read as a fallback when HEARTBEAT_SMTP_HOST is unset.
+# Copy it to /etc/heartbeat/heartbeat.conf (or wherever HEARTBEAT_CONF points),
+# lock it down (chmod 600), and fill in real values. Never commit the real file.
+
+[smtp]
+host = smtp.mail-provider.example
+port = 587
+user = heartbeat@example.com
+password = change-me
+from = heartbeat@example.com
+to = you@example.com, oncall@example.com
+
+[borg]
+# Optional. Only needed if borg_check.enabled is true in checks.yml and
+# HEARTBEAT_BORG_PASSPHRASE is unset.
+passphrase = change-me

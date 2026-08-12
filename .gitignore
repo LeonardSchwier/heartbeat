@@ -1,0 +1,35 @@
+# Real, secret-bearing config — never commit your actual checks/credentials
+/checks.yml
+/heartbeat.conf
+/heartbeat.env
+*.conf
+!heartbeat.conf.example
+/borg_passphrase
+
+# Runtime artifacts
+heartbeat.log
+heartbeat_preview.html
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

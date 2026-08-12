@@ -1,0 +1,43 @@
+[project]
+name = "heartbeat-monitor"
+version = "0.1.0"
+description = "Checks the outages nobody notices: HTTP endpoints, LUKS drives, MX DNS records, Borg backup freshness - one summary email, no daemon, no Docker."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Leonard Schwier" }]
+keywords = ["monitoring", "uptime", "mx-record", "dns", "borg", "backup", "luks", "self-hosted", "homelab"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "requests>=2.31",
+    "dnspython>=2.6",
+    "PyYAML>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/LeonardSchwier/heartbeat"
+Issues = "https://github.com/LeonardSchwier/heartbeat/issues"
+
+[project.scripts]
+heartbeat = "heartbeat:main"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"heartbeat.py" = ["E501"]  # embedded HTML email template, long inline-style lines
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

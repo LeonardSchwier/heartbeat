@@ -1,0 +1,21 @@
+# systemd unit - runs heartbeat.py once, triggered by heartbeat.timer.
+#
+# Install:
+#   sudo cp examples/heartbeat.service examples/heartbeat.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now heartbeat.timer
+#
+# Adjust WorkingDirectory / ExecStart / User to where you cloned the repo
+# and which (non-root, ideally) user should run it. Root is only required
+# if your LUKS/mount checks need it.
+
+[Unit]
+Description=heartbeat - checks the outages nobody notices
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/heartbeat
+EnvironmentFile=/etc/heartbeat/heartbeat.env
+ExecStart=/opt/heartbeat/.venv/bin/python3 /opt/heartbeat/heartbeat.py
