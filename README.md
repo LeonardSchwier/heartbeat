@@ -6,6 +6,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
+<p align="center">
+  <img src="docs/images/sample-report.png" alt="Sample heartbeat report email showing HTTP, drive, MX, and Borg backup check results with color-coded pass/fail rows" width="560">
+</p>
+
+*(Sample data - generated with `--dry-run`, not a real deployment.)*
+
 heartbeat is not an uptime monitor. If you want a dashboard with a nice UI
 that pings your services every few seconds, use
 [Uptime Kuma](https://github.com/louislam/uptime-kuma) - it's excellent at
@@ -31,14 +37,6 @@ no account to create.
 
 > Uptime Kuma is 400 MB of Docker. This is one Python file and one cron line.
 
-## What the email looks like
-
-<p align="center">
-  <img src="docs/images/sample-report.png" alt="Sample heartbeat report email showing HTTP, drive, MX, and Borg backup check results with color-coded pass/fail rows" width="560">
-</p>
-
-*(Sample data - generated with `--dry-run`, not a real deployment.)*
-
 ## Features
 
 | Check | What it catches |
@@ -52,6 +50,22 @@ Every run produces:
 - One HTML + plain-text email, color-coded by check, emoji status in the subject line
 - A local log file (or stdout, if the log path isn't writable)
 - A non-zero exit code when anything failed, for easy cron/systemd alerting on top
+
+## How it compares
+
+| | **heartbeat** | Uptime Kuma | Healthchecks.io |
+|---|---|---|---|
+| Setup | 1 script + config + cron/systemd | Docker container, web UI, database | Hosted SaaS, or a self-hosted Django app |
+| Checks | HTTP, LUKS drives, MX DNS, Borg backup freshness | HTTP/TCP/ping, with a live dashboard | "Did my job check in on time" (dead man's switch) |
+| MX / mail-routing check | Yes - the check that matters most here | No | No |
+| Alerting path | One email per run, independent of the service it's monitoring | Dashboard + notification integrations | Email/webhook when a check fails to ping in |
+| Moving parts | None (stateless, cron-driven) | Container, database, web server | None if hosted; a web app if self-hosted |
+
+Use them together, not instead of each other. Uptime Kuma and Healthchecks.io
+are built to watch whether a service *responds*. heartbeat is built to watch
+whether the things underneath that assumption still hold: whether your
+alerting can actually reach you, whether your encrypted storage is actually
+unlocked, and whether your backups are actually still running.
 
 ## Quickstart
 
@@ -95,13 +109,21 @@ documentation-block IP ranges, not real infrastructure.
 
 Relevant environment variables:
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `HEARTBEAT_CHECKS` | Path to the checks YAML file | `/etc/heartbeat/checks.yml` |
-| `HEARTBEAT_CONF` | Path to the credentials INI fallback | `/etc/heartbeat/heartbeat.conf` |
-| `HEARTBEAT_LOG` | Path to the log file | `/var/log/heartbeat.log` |
-| `HEARTBEAT_SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_FROM` / `_TO` | SMTP credentials | - |
-| `HEARTBEAT_BORG_PASSPHRASE` | Borg repo passphrase | - |
+| Variable | Required | Purpose | Default |
+|---|---|---|---|
+| `HEARTBEAT_CHECKS` | no | Path to the checks YAML file | `/etc/heartbeat/checks.yml` |
+| `HEARTBEAT_CONF` | no | Path to the credentials INI fallback | `/etc/heartbeat/heartbeat.conf` |
+| `HEARTBEAT_LOG` | no | Path to the log file | `/var/log/heartbeat.log` |
+| `HEARTBEAT_SMTP_HOST` | yes* | SMTP server hostname | - |
+| `HEARTBEAT_SMTP_USER` | yes* | SMTP login | - |
+| `HEARTBEAT_SMTP_PASSWORD` | yes* | SMTP password or app password | - |
+| `HEARTBEAT_SMTP_FROM` | yes* | From address | - |
+| `HEARTBEAT_SMTP_TO` | yes* | Recipient address(es), comma-separated | - |
+| `HEARTBEAT_SMTP_PORT` | no | SMTP port | `587` |
+| `HEARTBEAT_BORG_PASSPHRASE` | no (only if Borg check is configured) | Borg repo passphrase | - |
+
+\* Required only if you're using environment variables for credentials; all
+of these can instead come from `heartbeat.conf` (see above).
 
 CLI flags (`--checks`, `--conf`, `--log-file`, `--dry-run`, `--version`)
 override the corresponding paths for a single run - see `python3 heartbeat.py --help`.
@@ -113,16 +135,28 @@ See [`examples/`](examples/) for:
 - `crontab.example` - the cron equivalent, one line
 - `heartbeat.env.example` - the credentials file both of the above expect
 
-## Why not just use Uptime Kuma / Healthchecks.io / etc.?
+## FAQ
 
-Use them too, if you already do - they're not mutually exclusive. Those
-tools are built to watch whether a service *responds*. heartbeat is built
-to watch whether the things underneath that assumption still hold:
-whether your alerting can actually reach you (MX check), whether your
-encrypted storage is actually unlocked (LUKS check), and whether your
-backups are actually still running (Borg check). None of that needs a
-daemon, a database, or a container - it needs to run twice a day and tell
-you when something's wrong.
+**Does this need a database or persistent service?** No. It's a single
+Python file, run twice a day from cron or a systemd timer. No state is
+kept between runs beyond whatever your mount/Borg tooling already tracks.
+
+**Where do credentials come from?** `HEARTBEAT_SMTP_*` environment
+variables first, falling back to the INI file at `HEARTBEAT_CONF`
+(default `/etc/heartbeat/heartbeat.conf`). Nothing is ever hardcoded in
+`heartbeat.py`.
+
+**Can I preview a report without sending email?**
+Yes - `python3 heartbeat.py --checks checks.yml --dry-run` runs every
+check, prints the plain-text report, and writes `heartbeat_preview.html`;
+nothing is sent and no SMTP credentials are required.
+
+**Does it run continuously, like a daemon?** No - it's designed to run
+twice a day via cron or a systemd timer and then exit. See
+[examples/](examples/) for both.
+
+**What CLI flags are there?** `--checks`, `--conf`, `--log-file`,
+`--dry-run`, `--version` - see `python3 heartbeat.py --help`.
 
 ## Development
 
